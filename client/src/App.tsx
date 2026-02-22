@@ -11,6 +11,7 @@ import Booking from "@/pages/Booking";
 import Tracking from "@/pages/Tracking";
 import AdminDashboard from "@/pages/Admin";
 import Auth from "@/pages/Auth";
+import Support from "@/pages/Support";
 
 function Router() {
   return (
@@ -20,6 +21,7 @@ function Router() {
       <Route path="/book" component={Booking}/>
       <Route path="/tracking/:id" component={Tracking}/>
       <Route path="/admin" component={AdminDashboard}/>
+      <Route path="/support" component={Support}/>
       <Route component={NotFound} />
     </Switch>
   );

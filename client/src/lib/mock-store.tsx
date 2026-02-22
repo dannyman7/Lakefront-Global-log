@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, ReactNode, useRef } from 'react';
 import { useLocation } from 'wouter';
 
 export type Role = 'customer' | 'rider' | 'admin';
@@ -24,18 +24,24 @@ export type Order = {
   paymentMethod: string;
   createdAt: string;
   riderId?: string;
-  pickupCoords?: [number, number];
-  dropoffCoords?: [number, number];
-  riderCoords?: [number, number];
+  pickupCoords: [number, number];
+  dropoffCoords: [number, number];
+  // Socket simulation state
+  riderCoords: [number, number];
+  riderHeading: number;
+  riderSpeed: number;
+  pathTraveled: [number, number][];
+  lastUpdate: number;
 };
 
 const MOCK_USERS: User[] = [
-  { id: '1', name: 'Admin User', email: 'admin@lakefront.global', role: 'admin' },
-  { id: '2', name: 'John Customer', email: 'customer@demo.com', role: 'customer', walletBalance: 150.00 },
+  { id: '1', name: 'Admin Control', email: 'admin@lakefront.global', role: 'admin' },
+  { id: '2', name: 'Demo Customer', email: 'customer@demo.com', role: 'customer', walletBalance: 250.00 },
   { id: '3', name: 'Marcus J. (Rider)', email: 'rider@lakefront.global', role: 'rider' },
+  { id: '4', name: 'Sarah L. (Rider)', email: 'sarah@lakefront.global', role: 'rider' },
 ];
 
-const MOCK_ORDERS: Order[] = [
+const INITIAL_ORDERS: Order[] = [
   {
     id: 'LG-993A',
     customerId: '2',
@@ -45,11 +51,15 @@ const MOCK_ORDERS: Order[] = [
     fare: '$12.50',
     status: 'in_transit',
     paymentMethod: 'card',
-    createdAt: new Date().toISOString(),
+    createdAt: new Date(Date.now() - 1000 * 60 * 15).toISOString(),
     riderId: '3',
     pickupCoords: [40.7050, -74.0150],
     dropoffCoords: [40.7580, -73.9855],
-    riderCoords: [40.7128, -74.0060],
+    riderCoords: [40.7128, -74.0060], // Will be updated by simulation
+    riderHeading: 45,
+    riderSpeed: 35,
+    pathTraveled: [[40.7050, -74.0150], [40.7080, -74.0100]],
+    lastUpdate: Date.now()
   }
 ];
 
@@ -70,33 +80,78 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [, setLocation] = useLocation();
   const [user, setUser] = useState<User | null>(null);
   const [users, setUsers] = useState<User[]>(MOCK_USERS);
-  const [orders, setOrders] = useState<Order[]>(MOCK_ORDERS);
+  const [orders, setOrders] = useState<Order[]>(INITIAL_ORDERS);
+  
+  // Refs for simulation loop
+  const ordersRef = useRef(orders);
+  ordersRef.current = orders;
 
-  // Load from localStorage on mount
   useEffect(() => {
     const savedUser = localStorage.getItem('lakefront_user');
-    if (savedUser) {
-      setUser(JSON.parse(savedUser));
-    }
-    const savedOrders = localStorage.getItem('lakefront_orders');
-    if (savedOrders) {
-      setOrders(JSON.parse(savedOrders));
-    }
+    if (savedUser) setUser(JSON.parse(savedUser));
+    
+    // Simulate real-time Socket.io continuous streaming
+    // Bolt updates very frequently (1-2s)
+    const socketSimulationId = setInterval(() => {
+      setOrders(currentOrders => {
+        let changed = false;
+        const newOrders = currentOrders.map(order => {
+          if (order.status !== 'in_transit' && order.status !== 'accepted') return order;
+          
+          changed = true;
+          // Target is either pickup (if accepted) or dropoff (if in_transit)
+          const target = order.status === 'accepted' ? order.pickupCoords : order.dropoffCoords;
+          const current = order.riderCoords;
+          
+          // Calculate heading
+          const dy = target[0] - current[0];
+          const dx = target[1] - current[1];
+          const distance = Math.sqrt(dx*dx + dy*dy);
+          
+          // If close enough, don't move or trigger arrival
+          if (distance < 0.0005) {
+            if (order.status === 'accepted') {
+              return { ...order, status: 'in_transit' as OrderStatus, lastUpdate: Date.now() };
+            }
+            return order; 
+          }
+          
+          // Move 1% of the distance or a fixed step to make it smooth but noticeable
+          const step = Math.min(0.0008, distance * 0.05); // Speed multiplier
+          const angle = Math.atan2(dy, dx);
+          
+          const newLat = current[0] + Math.sin(angle) * step;
+          const newLng = current[1] + Math.cos(angle) * step;
+          
+          // Heading in degrees for UI rotation
+          const heading = (angle * 180 / Math.PI);
+          
+          // Fluctuate speed for realism
+          const speed = Math.floor(25 + Math.random() * 20);
+          
+          return {
+            ...order,
+            riderCoords: [newLat, newLng] as [number, number],
+            riderHeading: heading,
+            riderSpeed: speed,
+            pathTraveled: [...order.pathTraveled, current],
+            lastUpdate: Date.now()
+          };
+        });
+        
+        return changed ? newOrders : currentOrders;
+      });
+    }, 1500); // 1.5s updates for "live" feel
+
+    return () => clearInterval(socketSimulationId);
   }, []);
 
-  // Save orders to localStorage
-  useEffect(() => {
-    localStorage.setItem('lakefront_orders', JSON.stringify(orders));
-  }, [orders]);
-
   const login = async (email: string) => {
-    // Simulate API call
-    await new Promise(r => setTimeout(r, 1000));
+    await new Promise(r => setTimeout(r, 800));
     const foundUser = users.find(u => u.email === email);
     if (foundUser) {
       setUser(foundUser);
       localStorage.setItem('lakefront_user', JSON.stringify(foundUser));
-      
       if (foundUser.role === 'admin') setLocation('/admin');
       else setLocation('/book');
     } else {
@@ -126,8 +181,15 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   };
 
   const createOrder = async (orderData: Partial<Order>) => {
-    await new Promise(r => setTimeout(r, 2000)); // Simulate payment processing
+    await new Promise(r => setTimeout(r, 1500)); 
     
+    // NY coords roughly
+    const pCoords: [number, number] = [40.7 + (Math.random() * 0.05), -74.0 - (Math.random() * 0.05)];
+    const dCoords: [number, number] = [40.7 + (Math.random() * 0.05), -74.0 - (Math.random() * 0.05)];
+    
+    // Rider starts slightly away from pickup
+    const rCoords: [number, number] = [pCoords[0] - 0.01, pCoords[1] - 0.01];
+
     const newOrder: Order = {
       id: `LG-${Math.floor(Math.random() * 10000)}X`,
       customerId: user?.id || '2',
@@ -138,28 +200,25 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       status: 'pending',
       paymentMethod: orderData.paymentMethod || 'card',
       createdAt: new Date().toISOString(),
-      // Mock coordinates
-      pickupCoords: [40.7 + (Math.random() * 0.1), -74.0 + (Math.random() * 0.1)],
-      dropoffCoords: [40.7 + (Math.random() * 0.1), -74.0 + (Math.random() * 0.1)],
+      pickupCoords: pCoords,
+      dropoffCoords: dCoords,
+      riderCoords: rCoords,
+      riderHeading: 0,
+      riderSpeed: 0,
+      pathTraveled: [rCoords],
+      lastUpdate: Date.now()
     };
     
     setOrders([newOrder, ...orders]);
     
-    // Simulate auto-assigning a rider after 3 seconds
+    // Simulate Bolt-like quick assignment
     setTimeout(() => {
       setOrders(prev => prev.map(o => 
         o.id === newOrder.id 
-          ? { ...o, status: 'accepted', riderId: '3', riderCoords: o.pickupCoords } 
+          ? { ...o, status: 'accepted', riderId: '4' } 
           : o
       ));
-      
-      // Simulate transit after 6 seconds
-      setTimeout(() => {
-        setOrders(prev => prev.map(o => 
-          o.id === newOrder.id ? { ...o, status: 'in_transit' } : o
-        ));
-      }, 6000);
-    }, 3000);
+    }, 2500);
 
     return newOrder.id;
   };

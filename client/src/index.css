@@ -30,99 +30,58 @@
   --color-card-border: hsl(var(--card-border));
   --color-input: hsl(var(--input));
   --color-ring: hsl(var(--ring));
-  --color-chart-1: hsl(var(--chart-1));
-  --color-chart-2: hsl(var(--chart-2));
-  --color-chart-3: hsl(var(--chart-3));
-  --color-chart-4: hsl(var(--chart-4));
-  --color-chart-5: hsl(var(--chart-5));
-  --color-sidebar: hsl(var(--sidebar));
-  --color-sidebar-foreground: hsl(var(--sidebar-foreground));
-  --color-sidebar-primary: hsl(var(--sidebar-primary));
-  --color-sidebar-primary-foreground: hsl(var(--sidebar-primary-foreground));
-  --color-sidebar-accent: hsl(var(--sidebar-accent));
-  --color-sidebar-accent-foreground: hsl(var(--sidebar-accent-foreground));
-  --color-sidebar-border: hsl(var(--sidebar-border));
-  --color-sidebar-ring: hsl(var(--sidebar-ring));
-
+  
   --font-sans: 'Inter', sans-serif;
   --font-display: 'Space Grotesk', sans-serif;
 }
 
-/* LAKEFRONT GLOBAL - PROFESSIONAL LOGISTICS DESIGN SYSTEM */
+/* BOLT-STYLE LOGISTICS APP DESIGN SYSTEM */
 :root {
-  --background: 210 20% 98%;
-  --foreground: 222 47% 11%;
-  
-  --card: 0 0% 100%;
-  --card-foreground: 222 47% 11%;
-  
-  --popover: 0 0% 100%;
-  --popover-foreground: 222 47% 11%;
-  
-  /* Deep Corporate Blue */
-  --primary: 221 83% 53%;
-  --primary-foreground: 210 40% 98%;
-  
-  /* Electric/Neon Green for tracking/live status */
-  --secondary: 142 71% 45%;
-  --secondary-foreground: 222 47% 11%;
-  
-  --muted: 210 40% 96.1%;
-  --muted-foreground: 215.4 16.3% 46.9%;
-  
-  --accent: 210 40% 96.1%;
-  --accent-foreground: 222.2 47.4% 11.2%;
-  
-  --destructive: 0 84.2% 60.2%;
-  --destructive-foreground: 210 40% 98%;
-
-  --border: 214.3 31.8% 91.4%;
-  --input: 214.3 31.8% 91.4%;
-  --ring: 221 83% 53%;
-  
-  --radius: 0.75rem;
-
-  --chart-1: 221 83% 53%;
-  --chart-2: 142 71% 45%;
-  --chart-3: 199 89% 48%;
-  --chart-4: 43 74% 66%;
-  --chart-5: 27 87% 67%;
-}
-
-.dark {
-  --background: 222 47% 11%;
+  /* Defaulting to dark mode for a premium Bolt-like feel */
+  --background: 222 47% 7%;
   --foreground: 210 40% 98%;
   
-  --card: 222 47% 11%;
+  --card: 222 47% 9%;
   --card-foreground: 210 40% 98%;
   
-  --popover: 222 47% 11%;
+  --popover: 222 47% 9%;
   --popover-foreground: 210 40% 98%;
   
-  --primary: 217.2 91.2% 59.8%;
-  --primary-foreground: 222.2 47.4% 11.2%;
+  /* Electric Bolt Green */
+  --primary: 142 71% 45%;
+  --primary-foreground: 222 47% 7%;
   
-  --secondary: 142 71% 45%;
-  --secondary-foreground: 222 47% 11%;
+  /* Bright Cyan Accent */
+  --secondary: 199 89% 48%;
+  --secondary-foreground: 222 47% 7%;
   
-  --muted: 217.2 32.6% 17.5%;
+  --muted: 217.2 32.6% 15%;
   --muted-foreground: 215 20.2% 65.1%;
   
-  --accent: 217.2 32.6% 17.5%;
+  --accent: 217.2 32.6% 15%;
   --accent-foreground: 210 40% 98%;
   
-  --destructive: 0 62.8% 30.6%;
+  --destructive: 0 62.8% 50.6%;
   --destructive-foreground: 210 40% 98%;
   
-  --border: 217.2 32.6% 17.5%;
-  --input: 217.2 32.6% 17.5%;
-  --ring: 224.3 76.3% 48%;
+  --border: 217.2 32.6% 15%;
+  --input: 217.2 32.6% 15%;
+  --ring: 142 71% 45%;
   
-  --chart-1: 217.2 91.2% 59.8%;
-  --chart-2: 142 71% 45%;
-  --chart-3: 199 89% 48%;
-  --chart-4: 43 74% 66%;
-  --chart-5: 27 87% 67%;
+  --radius: 1rem;
+}
+
+.light {
+  /* Light mode fallback, though dark is default */
+  --background: 0 0% 100%;
+  --foreground: 222 47% 7%;
+  --card: 0 0% 100%;
+  --card-foreground: 222 47% 7%;
+  --primary: 142 71% 45%;
+  --primary-foreground: 0 0% 100%;
+  --muted: 210 40% 96.1%;
+  --border: 214.3 31.8% 91.4%;
+  --input: 214.3 31.8% 91.4%;
 }
 
 @layer base {
@@ -137,41 +96,51 @@
   }
 }
 
-/* Custom utility for map grid pattern */
-.bg-grid-pattern {
-  background-size: 40px 40px;
-  background-image: linear-gradient(to right, rgba(0, 0, 0, 0.05) 1px, transparent 1px),
-                    linear-gradient(to bottom, rgba(0, 0, 0, 0.05) 1px, transparent 1px);
-}
-.dark .bg-grid-pattern {
-  background-image: linear-gradient(to right, rgba(255, 255, 255, 0.05) 1px, transparent 1px),
-                    linear-gradient(to bottom, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+/* Glassmorphism utilities */
+.glass-panel {
+  background: rgba(15, 23, 42, 0.6);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.3);
 }
 
-/* Blinking dot for active map tracking */
-.live-dot {
+.glass-card {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.01) 100%);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+/* Radar pulse for live transmission */
+.radar-pulse {
   position: relative;
 }
-.live-dot::after {
+.radar-pulse::before, .radar-pulse::after {
   content: "";
   position: absolute;
-  top: 0;
-  left: 0;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
   width: 100%;
   height: 100%;
   border-radius: 50%;
-  background-color: inherit;
-  animation: pulse-ring 2s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
+  background-color: hsl(var(--primary));
+  opacity: 0;
   z-index: -1;
+}
+.radar-pulse::before {
+  animation: pulse-ring 2s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
+}
+.radar-pulse::after {
+  animation: pulse-ring 2s cubic-bezier(0.215, 0.61, 0.355, 1) infinite 1s;
 }
 
 @keyframes pulse-ring {
-  0% {
-    transform: scale(0.8);
-    opacity: 0.8;
-  }
-  100% {
-    transform: scale(2.5);
-    opacity: 0;
-  }
+  0% { transform: translate(-50%, -50%) scale(0.8); opacity: 0.8; }
+  100% { transform: translate(-50%, -50%) scale(3); opacity: 0; }
+}
+
+/* Custom map marker rotation class applied dynamically via JS */
+.rotated-marker {
+  transition: transform 0.2s linear;
 }

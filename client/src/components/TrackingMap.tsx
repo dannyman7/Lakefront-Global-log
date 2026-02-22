@@ -1,64 +1,73 @@
-import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
-import { Icon } from 'leaflet';
+import { MapContainer, TileLayer, Marker, Popup, useMap, Polyline } from 'react-leaflet';
+import L, { Icon, DivIcon } from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 
-// Fix for default marker icon issues in React Leaflet
+// Reset leaflet defaults
 delete (Icon.Default.prototype as any)._getIconUrl;
-Icon.Default.mergeOptions({
-  iconRetinaUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon-2x.png',
-  iconUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon.png',
-  shadowUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-shadow.png',
+
+// Custom Icons that look like Google Maps / Bolt
+const createVehicleIcon = (heading: number, type: string) => {
+  // Rotate the SVG based on heading
+  // Adjust heading so 0 is up
+  const rot = heading + 90; 
+  
+  let svg = '';
+  if (type === 'car' || type === 'van') {
+    svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#22c55e" stroke="#0f172a" stroke-width="1.5" style="transform: rotate(${rot}deg);" class="drop-shadow-lg"><rect width="18" height="12" x="3" y="6" rx="3"/><path d="M4 11h16"/></svg>`;
+  } else {
+    // Bike
+    svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#22c55e" stroke="#0f172a" stroke-width="1.5" style="transform: rotate(${rot}deg);" class="drop-shadow-lg"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3" fill="#0f172a"/></svg>`;
+  }
+
+  return new DivIcon({
+    html: `
+      <div class="relative flex items-center justify-center w-12 h-12">
+        <div class="absolute inset-0 bg-green-500/20 rounded-full animate-ping" style="animation-duration: 2s;"></div>
+        <div class="w-8 h-8 rounded-full bg-white border-2 border-slate-900 flex items-center justify-center shadow-xl z-10 p-1">
+          ${svg}
+        </div>
+      </div>
+    `,
+    className: 'bg-transparent',
+    iconSize: [48, 48],
+    iconAnchor: [24, 24],
+  });
+};
+
+const pinHtml = (color: string) => `
+  <div class="relative w-8 h-10 flex flex-col items-center">
+    <div class="w-8 h-8 rounded-full flex items-center justify-center shadow-lg border-2 border-white" style="background-color: ${color}">
+      <div class="w-2.5 h-2.5 rounded-full bg-white"></div>
+    </div>
+    <div class="w-0.5 h-3 shadow-sm" style="background-color: ${color}"></div>
+  </div>
+`;
+
+const pickupIcon = new DivIcon({
+  html: pinHtml('#3b82f6'), // Blue
+  className: 'bg-transparent',
+  iconSize: [32, 40],
+  iconAnchor: [16, 40],
 });
 
-// Custom Icon for Vehicle
-const vehicleIcon = new Icon({
-  iconUrl: 'data:image/svg+xml;base64,' + btoa(`
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#000" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-truck">
-      <rect width="16" height="13" x="2" y="5" rx="2" fill="#2563eb" />
-      <polygon points="18 5 22 9 22 18 18 18" fill="#2563eb" />
-      <circle cx="7" cy="18" r="2" fill="#1e293b" />
-      <circle cx="17" cy="18" r="2" fill="#1e293b" />
-      <line x1="22" x2="18" y1="12" y2="12" />
-    </svg>
-  `),
-  iconSize: [40, 40],
-  iconAnchor: [20, 20],
-  popupAnchor: [0, -20],
-  className: 'drop-shadow-lg'
-});
-
-const pickupIcon = new Icon({
-  iconUrl: 'data:image/svg+xml;base64,' + btoa(`
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#16a34a" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-map-pin">
-      <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/>
-      <circle cx="12" cy="10" r="3" fill="#fff"/>
-    </svg>
-  `),
-  iconSize: [32, 32],
-  iconAnchor: [16, 32],
-  popupAnchor: [0, -32],
-});
-
-const dropoffIcon = new Icon({
-  iconUrl: 'data:image/svg+xml;base64,' + btoa(`
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#dc2626" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-map-pin">
-      <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/>
-      <circle cx="12" cy="10" r="3" fill="#fff"/>
-    </svg>
-  `),
-  iconSize: [32, 32],
-  iconAnchor: [16, 32],
-  popupAnchor: [0, -32],
+const dropoffIcon = new DivIcon({
+  html: pinHtml('#ef4444'), // Red
+  className: 'bg-transparent',
+  iconSize: [32, 40],
+  iconAnchor: [16, 40],
 });
 
 
-// Component to handle map center changes dynamically
-function MapUpdater({ center }: { center: [number, number] }) {
+function MapController({ center, zoom, bounds }: { center: [number, number], zoom: number, bounds?: L.LatLngBoundsExpression }) {
   const map = useMap();
   useEffect(() => {
-    map.setView(center, map.getZoom(), { animate: true, duration: 1.5 });
-  }, [center, map]);
+    if (bounds) {
+      map.fitBounds(bounds, { padding: [50, 50], animate: true, duration: 1 });
+    } else {
+      map.setView(center, zoom, { animate: true, duration: 1.5 });
+    }
+  }, [center, zoom, bounds, map]);
   return null;
 }
 
@@ -66,49 +75,85 @@ interface MapProps {
   riderPos: [number, number];
   pickupPos?: [number, number];
   dropoffPos?: [number, number];
+  pathTraveled?: [number, number][];
+  riderHeading?: number;
+  vehicleType?: string;
   className?: string;
   zoom?: number;
+  fitBounds?: boolean;
 }
 
-export function TrackingMap({ riderPos, pickupPos, dropoffPos, className = "h-full w-full", zoom = 14 }: MapProps) {
-  // Using a stylized map tile for professional logistics look (CartoDB Positron)
+export function TrackingMap({ 
+  riderPos, pickupPos, dropoffPos, 
+  pathTraveled = [], riderHeading = 0, vehicleType = 'bike',
+  className = "h-full w-full", zoom = 15, fitBounds = false 
+}: MapProps) {
+  
+  // Calculate bounds if requested
+  const bounds = fitBounds && pickupPos && dropoffPos 
+    ? L.latLngBounds([pickupPos, dropoffPos, riderPos]) 
+    : undefined;
+
+  // Use a dark map tile that looks like Google Maps Dark Mode (Carto Dark Matter)
   return (
-    <div className={`relative overflow-hidden rounded-xl border shadow-sm ${className}`}>
+    <div className={`relative overflow-hidden ${className}`}>
       <MapContainer 
         center={riderPos} 
         zoom={zoom} 
         zoomControl={false}
-        className="h-full w-full"
+        className="h-full w-full bg-[#0f172a]"
       >
         <TileLayer
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
-          url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
+          attribution='&copy; <a href="https://carto.com/attributions">CARTO</a>'
+          url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
         />
         
+        {/* Route Trail */}
+        {pathTraveled.length > 0 && (
+          <Polyline 
+            positions={pathTraveled} 
+            color="#22c55e" 
+            weight={4} 
+            opacity={0.8}
+            dashArray="1, 8"
+            lineCap="round"
+          />
+        )}
+        
+        {/* Planned Route (Dashed) */}
+        {pickupPos && dropoffPos && (
+           <Polyline 
+            positions={[pickupPos, dropoffPos]} 
+            color="#3b82f6" 
+            weight={3} 
+            opacity={0.3}
+            dashArray="5, 10"
+          />
+        )}
+
         {pickupPos && (
           <Marker position={pickupPos} icon={pickupIcon}>
-            <Popup>Pickup Location</Popup>
+            <Popup className="glass-panel text-white font-sans rounded-xl border-none">Pickup</Popup>
           </Marker>
         )}
         
         {dropoffPos && (
           <Marker position={dropoffPos} icon={dropoffIcon}>
-            <Popup>Dropoff Location</Popup>
+            <Popup className="glass-panel text-white font-sans rounded-xl border-none">Dropoff</Popup>
           </Marker>
         )}
         
-        <Marker position={riderPos} icon={vehicleIcon}>
-          <Popup>
-            <div className="font-semibold text-primary">Rider is here</div>
-            <div className="text-xs text-muted-foreground">Moving at 35 mph</div>
-          </Popup>
-        </Marker>
+        <Marker 
+          position={riderPos} 
+          icon={createVehicleIcon(riderHeading, vehicleType)}
+          zIndexOffset={1000}
+        />
         
-        <MapUpdater center={riderPos} />
+        <MapController center={riderPos} zoom={zoom} bounds={bounds} />
       </MapContainer>
       
-      {/* Decorative overlay to make it look like a high-tech UI */}
-      <div className="absolute inset-0 pointer-events-none ring-1 ring-inset ring-black/10 rounded-xl mix-blend-multiply"></div>
+      {/* Vignette Overlay for premium look */}
+      <div className="absolute inset-0 pointer-events-none shadow-[inset_0_0_100px_rgba(0,0,0,0.8)] z-[400]"></div>
     </div>
   );
 }
