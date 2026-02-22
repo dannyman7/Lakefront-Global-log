@@ -5,12 +5,18 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/not-found";
 
+import Home from "@/pages/Home";
+import Booking from "@/pages/Booking";
+import Tracking from "@/pages/Tracking";
+import AdminDashboard from "@/pages/Admin";
+
 function Router() {
   return (
     <Switch>
-      {/* Add pages below */}
-      {/* <Route path="/" component={Home}/> */}
-      {/* Fallback to 404 */}
+      <Route path="/" component={Home}/>
+      <Route path="/book" component={Booking}/>
+      <Route path="/tracking/:id" component={Tracking}/>
+      <Route path="/admin" component={AdminDashboard}/>
       <Route component={NotFound} />
     </Switch>
   );
