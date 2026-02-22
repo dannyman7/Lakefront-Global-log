@@ -5,7 +5,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area } from 'recharts';
-import { Users, AlertCircle, TrendingUp, Package, MapPin, Settings } from "lucide-react";
+import { Users, AlertCircle, TrendingUp, Package, MapPin, Settings, CheckCircle2, ChevronRight } from "lucide-react";
+import { useStore } from "@/lib/mock-store";
+import { useEffect } from "react";
+import { useLocation } from "wouter";
 
 const earningsData = [
   { name: 'Mon', revenue: 4000 },
@@ -18,6 +21,17 @@ const earningsData = [
 ];
 
 export default function AdminDashboard() {
+  const { user, orders, updateOrderStatus } = useStore();
+  const [, setLocation] = useLocation();
+
+  useEffect(() => {
+    if (!user || user.role !== 'admin') {
+      setLocation('/');
+    }
+  }, [user, setLocation]);
+
+  if (!user || user.role !== 'admin') return null;
+
   return (
     <Layout>
       <div className="bg-muted/20 min-h-screen pb-12">
@@ -38,7 +52,7 @@ export default function AdminDashboard() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
             {[
               { label: "Active Riders", value: "1,248", icon: Users, color: "text-blue-500", bg: "bg-blue-500/10", trend: "+12%" },
-              { label: "Live Deliveries", value: "432", icon: Package, color: "text-secondary", bg: "bg-secondary/10", trend: "+5%" },
+              { label: "Live Deliveries", value: orders.filter(o => o.status !== 'delivered').length.toString(), icon: Package, color: "text-secondary", bg: "bg-secondary/10", trend: "+5%" },
               { label: "Today's Revenue", value: "$34,290", icon: TrendingUp, color: "text-green-500", bg: "bg-green-500/10", trend: "+18%" },
               { label: "KYC Pending", value: "24", icon: AlertCircle, color: "text-amber-500", bg: "bg-amber-500/10", trend: "-2" },
             ].map((stat, i) => (
@@ -63,8 +77,9 @@ export default function AdminDashboard() {
           </div>
 
           <Tabs defaultValue="overview" className="space-y-6">
-            <TabsList className="bg-background border h-12 px-2">
+            <TabsList className="bg-background border h-12 px-2 overflow-x-auto w-full justify-start md:w-auto">
               <TabsTrigger value="overview" className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary">Network Overview</TabsTrigger>
+              <TabsTrigger value="orders" className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary">Live Orders</TabsTrigger>
               <TabsTrigger value="riders" className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary">Rider Management</TabsTrigger>
               <TabsTrigger value="kyc" className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary relative">
                 KYC Review
@@ -137,11 +152,50 @@ export default function AdminDashboard() {
               </div>
             </TabsContent>
             
-            {/* Other tabs would go here, omitting for brevity in mockup */}
+            <TabsContent value="orders" className="animate-in fade-in duration-500">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Live Orders Dashboard</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    {orders.map(order => (
+                      <div key={order.id} className="flex flex-col md:flex-row md:items-center justify-between p-4 border rounded-xl bg-card gap-4">
+                        <div className="flex gap-4 items-center">
+                          <div className="bg-primary/10 p-3 rounded-full text-primary">
+                            <Package className="h-6 w-6" />
+                          </div>
+                          <div>
+                            <p className="font-bold">{order.id}</p>
+                            <p className="text-sm text-muted-foreground">Pickup: <span className="text-foreground">{order.pickup}</span></p>
+                          </div>
+                        </div>
+                        <div className="flex flex-col md:items-end gap-2">
+                          <Badge variant="outline" className={
+                            order.status === 'in_transit' ? 'bg-secondary/10 text-secondary border-secondary/20' :
+                            order.status === 'delivered' ? 'bg-primary/10 text-primary border-primary/20' :
+                            'bg-amber-500/10 text-amber-500 border-amber-500/20'
+                          }>
+                            {order.status}
+                          </Badge>
+                          <div className="flex gap-2">
+                            {order.status !== 'delivered' && (
+                              <Button size="sm" variant="outline" onClick={() => updateOrderStatus(order.id, 'delivered')}>Mark Delivered</Button>
+                            )}
+                            <Button size="sm" variant="ghost"><ChevronRight className="h-4 w-4" /></Button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
             <TabsContent value="kyc">
               <Card>
                 <CardContent className="p-12 text-center text-muted-foreground">
-                  KYC Review components to be implemented in full version.
+                  KYC Review components to be implemented in full version. Use demo mode logic for now.
                 </CardContent>
               </Card>
             </TabsContent>

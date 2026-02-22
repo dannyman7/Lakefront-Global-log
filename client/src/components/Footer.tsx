@@ -28,20 +28,20 @@ export function Footer() {
           <div>
             <h3 className="font-semibold text-foreground mb-4">Services</h3>
             <ul className="space-y-3 text-sm">
-              <li><Link href="/book"><a className="text-muted-foreground hover:text-primary transition-colors">Same-day Delivery</a></Link></li>
-              <li><Link href="/book"><a className="text-muted-foreground hover:text-primary transition-colors">Scheduled Drops</a></Link></li>
-              <li><Link href="/book"><a className="text-muted-foreground hover:text-primary transition-colors">Enterprise Logistics</a></Link></li>
-              <li><Link href="/book"><a className="text-muted-foreground hover:text-primary transition-colors">Inter-city Freight</a></Link></li>
+              <li><Link href="/book" className="text-muted-foreground hover:text-primary transition-colors">Same-day Delivery</Link></li>
+              <li><Link href="/book" className="text-muted-foreground hover:text-primary transition-colors">Scheduled Drops</Link></li>
+              <li><Link href="/book" className="text-muted-foreground hover:text-primary transition-colors">Enterprise Logistics</Link></li>
+              <li><Link href="/book" className="text-muted-foreground hover:text-primary transition-colors">Inter-city Freight</Link></li>
             </ul>
           </div>
 
           <div>
             <h3 className="font-semibold text-foreground mb-4">Company</h3>
             <ul className="space-y-3 text-sm">
-              <li><Link href="/"><a className="text-muted-foreground hover:text-primary transition-colors">About Us</a></Link></li>
-              <li><Link href="/"><a className="text-muted-foreground hover:text-primary transition-colors">Careers</a></Link></li>
-              <li><Link href="/"><a className="text-muted-foreground hover:text-primary transition-colors">Become a Rider</a></Link></li>
-              <li><Link href="/"><a className="text-muted-foreground hover:text-primary transition-colors">Partner Program</a></Link></li>
+              <li><Link href="/" className="text-muted-foreground hover:text-primary transition-colors">About Us</Link></li>
+              <li><Link href="/" className="text-muted-foreground hover:text-primary transition-colors">Careers</Link></li>
+              <li><Link href="/" className="text-muted-foreground hover:text-primary transition-colors">Become a Rider</Link></li>
+              <li><Link href="/" className="text-muted-foreground hover:text-primary transition-colors">Partner Program</Link></li>
             </ul>
           </div>
 
@@ -65,9 +65,9 @@ export function Footer() {
         <div className="border-t pt-8 flex flex-col md:flex-row items-center justify-between gap-4 text-xs text-muted-foreground">
           <p>© {new Date().getFullYear()} Lakefront Global Logistics. All rights reserved.</p>
           <div className="flex gap-6">
-            <Link href="/"><a className="hover:text-foreground transition-colors">Privacy Policy</a></Link>
-            <Link href="/"><a className="hover:text-foreground transition-colors">Terms of Service</a></Link>
-            <Link href="/"><a className="hover:text-foreground transition-colors">Insurance Details</a></Link>
+            <Link href="/" className="hover:text-foreground transition-colors">Privacy Policy</Link>
+            <Link href="/" className="hover:text-foreground transition-colors">Terms of Service</Link>
+            <Link href="/" className="hover:text-foreground transition-colors">Insurance Details</Link>
           </div>
         </div>
       </div>

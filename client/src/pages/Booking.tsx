@@ -4,14 +4,31 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Card, CardContent } from "@/components/ui/card";
-import { MapPin, Navigation2, PackageSearch, CreditCard, ChevronRight, CheckCircle2, ShieldCheck } from "lucide-react";
-import { useState } from "react";
+import { MapPin, Navigation2, PackageSearch, CreditCard, ChevronRight, CheckCircle2, ShieldCheck, Loader2 } from "lucide-react";
+import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
+import { useStore } from "@/lib/mock-store";
+import { useToast } from "@/hooks/use-toast";
 
 export default function Booking() {
   const [step, setStep] = useState(1);
   const [, setLocation] = useLocation();
+  const { user, createOrder } = useStore();
+  const { toast } = useToast();
+  
   const [vehicle, setVehicle] = useState("bike");
+  const [pickup, setPickup] = useState("120 Logistics Hub, NY 10001");
+  const [dropoff, setDropoff] = useState("");
+  const [paymentMethod, setPaymentMethod] = useState("card");
+  const [isProcessing, setIsProcessing] = useState(false);
+
+  // Require login to book
+  useEffect(() => {
+    if (!user) {
+      toast({ title: "Authentication Required", description: "Please sign in to book a delivery." });
+      setLocation('/auth');
+    }
+  }, [user, setLocation, toast]);
 
   const getFare = () => {
     switch(vehicle) {
@@ -23,13 +40,34 @@ export default function Booking() {
     }
   };
 
-  const handleNext = () => {
-    if (step < 3) setStep(step + 1);
-    else {
-      // Simulate booking process and redirect to tracking
-      setTimeout(() => setLocation("/tracking/new-order-123"), 1000);
+  const handleNext = async () => {
+    if (step === 1 && !dropoff) {
+      toast({ variant: "destructive", title: "Error", description: "Please enter a dropoff location." });
+      return;
+    }
+
+    if (step < 3) {
+      setStep(step + 1);
+    } else {
+      setIsProcessing(true);
+      try {
+        const orderId = await createOrder({
+          pickup,
+          dropoff,
+          vehicle,
+          fare: getFare(),
+          paymentMethod
+        });
+        toast({ title: "Payment Successful", description: "Your booking is confirmed!" });
+        setLocation(`/tracking/${orderId}`);
+      } catch (error) {
+        toast({ variant: "destructive", title: "Booking Failed", description: "Something went wrong." });
+        setIsProcessing(false);
+      }
     }
   };
+
+  if (!user) return null;
 
   return (
     <Layout>
@@ -69,12 +107,23 @@ export default function Booking() {
                       
                       <div className="space-y-2 relative">
                         <Label className="flex items-center gap-2"><div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center z-10 relative"><Navigation2 className="h-4 w-4 text-primary" /></div> Pickup Location</Label>
-                        <Input placeholder="Enter pickup address" className="ml-10 w-[calc(100%-40px)]" defaultValue="120 Logistics Hub, NY 10001" />
+                        <Input 
+                          placeholder="Enter pickup address" 
+                          className="ml-10 w-[calc(100%-40px)]" 
+                          value={pickup}
+                          onChange={(e) => setPickup(e.target.value)}
+                        />
                       </div>
                       
                       <div className="space-y-2 relative">
-                        <Label className="flex items-center gap-2"><div className="w-8 h-8 rounded-full bg-destructive/10 flex items-center justify-center z-10 relative"><MapPin className="h-4 w-4 text-destructive" /></div> Dropoff Location</Label>
-                        <Input placeholder="Enter destination address" className="ml-10 w-[calc(100%-40px)]" />
+                        <Label className="flex items-center gap-2"><div className="w-8 h-8 rounded-full bg-destructive/10 flex items-center justify-center z-10 relative"><MapPin className="h-4 w-4 text-destructive" /></div> Dropoff Location <span className="text-destructive">*</span></Label>
+                        <Input 
+                          placeholder="Enter destination address" 
+                          className="ml-10 w-[calc(100%-40px)]" 
+                          value={dropoff}
+                          onChange={(e) => setDropoff(e.target.value)}
+                          required
+                        />
                       </div>
                     </div>
                   </CardContent>
@@ -89,7 +138,7 @@ export default function Booking() {
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <Label>Recipient Name</Label>
-                        <Input placeholder="John Doe" />
+                        <Input placeholder="Jane Smith" />
                       </div>
                       <div className="space-y-2">
                         <Label>Recipient Phone</Label>
@@ -137,17 +186,18 @@ export default function Booking() {
             {step === 3 && (
               <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
                 <h3 className="font-semibold text-lg">Payment Method</h3>
-                <RadioGroup defaultValue="card" className="space-y-3">
+                <RadioGroup value={paymentMethod} onValueChange={setPaymentMethod} className="space-y-3">
                   {[
-                    { id: 'card', name: 'Credit/Debit Card', icon: CreditCard },
+                    { id: 'card', name: 'Credit/Debit Card (Stripe/Paystack)', icon: CreditCard },
                     { id: 'bank', name: 'Bank Transfer (Instant)', icon: CreditCard },
                     { id: 'ussd', name: 'USSD Code', icon: CreditCard },
-                    { id: 'wallet', name: 'Lakefront Wallet ($120.00)', icon: CreditCard },
+                    { id: 'wallet', name: `Lakefront Wallet ($${user.walletBalance?.toFixed(2) || '0.00'})`, icon: CreditCard },
+                    { id: 'cash', name: 'Cash on Delivery', icon: CreditCard },
                   ].map((method) => (
                     <Label
                       key={method.id}
                       htmlFor={method.id}
-                      className="flex items-center gap-4 p-4 border rounded-xl cursor-pointer hover:bg-muted/50 transition-colors [&:has([data-state=checked])]:border-primary"
+                      className="flex items-center gap-4 p-4 border rounded-xl cursor-pointer hover:bg-muted/50 transition-colors [&:has([data-state=checked])]:border-primary [&:has([data-state=checked])]:bg-primary/5"
                     >
                       <RadioGroupItem value={method.id} id={method.id} />
                       <method.icon className="h-5 w-5 text-muted-foreground" />
@@ -159,17 +209,21 @@ export default function Booking() {
                 <div className="bg-primary/5 p-4 rounded-xl border border-primary/20 flex items-start gap-3 mt-6">
                   <ShieldCheck className="h-5 w-5 text-primary shrink-0 mt-0.5" />
                   <div>
-                    <p className="text-sm font-medium">Secure Payments</p>
-                    <p className="text-xs text-muted-foreground">Your payment is processed securely via Paystack/Stripe integration.</p>
+                    <p className="text-sm font-medium">Secure Simulator</p>
+                    <p className="text-xs text-muted-foreground">In demo mode, payment is simulated. In production, this integrates with Paystack/Flutterwave/Stripe.</p>
                   </div>
                 </div>
               </div>
             )}
 
             <div className="flex justify-between pt-6 border-t">
-              <Button variant="ghost" onClick={() => setStep(step - 1)} disabled={step === 1}>Back</Button>
-              <Button size="lg" className="rounded-full px-8 gap-2" onClick={handleNext}>
-                {step === 3 ? 'Confirm Booking' : 'Continue'} <ChevronRight className="h-4 w-4" />
+              <Button variant="ghost" onClick={() => setStep(step - 1)} disabled={step === 1 || isProcessing}>Back</Button>
+              <Button size="lg" className="rounded-full px-8 gap-2" onClick={handleNext} disabled={isProcessing}>
+                {isProcessing ? (
+                  <><Loader2 className="mr-2 h-5 w-5 animate-spin" /> Processing Payment...</>
+                ) : (
+                  <>{step === 3 ? 'Confirm Booking' : 'Continue'} <ChevronRight className="h-4 w-4" /></>
+                )}
               </Button>
             </div>
           </div>
@@ -181,13 +235,15 @@ export default function Booking() {
               
               <div className="space-y-4 mb-6">
                 <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Distance</span>
-                  <span className="font-medium">4.2 miles</span>
+                  <span className="text-muted-foreground">Pickup</span>
+                  <span className="font-medium truncate max-w-[150px]">{pickup}</span>
                 </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Est. Time</span>
-                  <span className="font-medium">18 mins</span>
-                </div>
+                {dropoff && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Dropoff</span>
+                    <span className="font-medium truncate max-w-[150px]">{dropoff}</span>
+                  </div>
+                )}
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Vehicle</span>
                   <span className="font-medium capitalize">{vehicle}</span>
@@ -200,7 +256,7 @@ export default function Booking() {
               </div>
               
               <div className="bg-muted p-3 rounded-lg text-xs text-muted-foreground leading-relaxed">
-                Dynamic pricing applied based on current traffic conditions and precise GPS distance.
+                Dynamic pricing applied based on precise GPS distance and live traffic estimation.
               </div>
             </div>
           </div>
